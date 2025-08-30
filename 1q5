@@ -1,0 +1,70 @@
+# 5th question
+import random
+from tabulate import tabulate
+from numpy.random import exponential, poisson, normal
+
+num_days_list = [200, 500, 1000, 10000]
+
+demand_points = {
+    "Good": {
+        (1, 3): 40, (4, 8): 50, (9, 23): 60, (24, 43): 70, (44, 78): 80, (79, 93): 90, (94, 100): 100
+    },
+    "Fair": {
+        (1, 10): 40, (11, 28): 50, (29, 68): 60, (69, 88): 70, (89, 96): 80, (97, 100): 90
+    },
+    "Poor": {
+        (1, 44): 40, (45, 66): 50, (67, 82): 60, (83, 94): 70, (95, 100): 80
+    }
+}
+
+
+for num_days in num_days_list:
+    print(f"No of days :: {num_days}")
+    total_paper = random.randint(0, 100)
+    data = []
+    for day in range(num_days):
+        news_point = random.randint(1, 100)
+        demand = 40
+        news_type = ""
+        if 1 <= news_point <= 35:
+            demand_point_raw = exponential(scale=50)
+            for (lower, upper), d in demand_points["Good"].items():
+                if lower <= demand_point_raw <= upper:
+                    demand = d
+                    break
+            news_type = "Good"
+
+        elif 35 < news_point <= 80:
+            demand_point_raw = normal(loc=50, scale=10)
+            for (lower, upper), d in demand_points["Fair"].items():
+                 if lower <= demand_point_raw <= upper:
+                    demand = d
+                    break
+            news_type = "Fair"
+        else:
+            demand_point_raw = poisson(lam=50)
+            for (lower, upper), d in demand_points["Poor"].items():
+                 if lower <= demand_point_raw <= upper:
+                    demand = d
+                    break
+            news_type = "Poor"
+
+
+        paper_sold = min(total_paper, demand)
+        paper_not_sold = total_paper - paper_sold
+
+        revenue = (paper_sold * 45) + (paper_not_sold * 5)
+
+        loss_of_profit = 0
+        if demand > total_paper:
+            loss_of_profit = (demand - total_paper) * (45-30)
+
+        recycle_income = paper_not_sold * 5
+
+        profit = revenue - (total_paper * 30)
+
+        data.append([day + 1, news_type, demand, total_paper, paper_sold, paper_not_sold, revenue, loss_of_profit, recycle_income, profit])
+
+    headers = ["Day", "Types of news", "Demand", "Total no of papers", "No of papers sold", "No of papers not sold", "Revenue", "Loss of Profit", "Recylce Income", "Profit"]
+    print(tabulate(data, headers=headers, tablefmt="grid"))
+    print("-" * 151)
