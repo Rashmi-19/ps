@@ -1,0 +1,140 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import ttest_ind
+import math
+from sympy import Function, dsolve, Derivative, Eq, symbols, lambdify, integrate
+from prettytable import PrettyTable
+
+
+def f(x, y):
+    return ((x**2) * y)
+
+def f2(x):
+  x_sym = symbols('x')
+  y_sym = Function('y')
+  ode = Eq(Derivative(y_sym(x_sym), x_sym), f(x_sym, y_sym(x_sym)))
+  ics = {y_sym(0): 1}
+  sol = dsolve(ode, y_sym(x_sym), ics=ics)
+  y_analytical_expr = sol.rhs
+  y_analytical = lambdify(x_sym, y_analytical_expr, 'numpy')
+  return y_analytical(x)
+
+
+# Euler's Method implementation
+def euler_method(f, x0, y0, h, n):
+    x_vals = [x0]
+    y_vals = [y0]
+    for i in range(n):
+        y_next = y_vals[-1] + h * f(x_vals[-1], y_vals[-1])
+        x_next = x_vals[-1] + h
+        x_vals.append(x_next)
+        y_vals.append(y_next)
+    return np.array(x_vals), np.array(y_vals)
+
+def rk4_method(f, x0, y0, h, n):
+    x_vals = [x0]
+    y_vals = [y0]
+    for i in range(n):
+        x_i = x_vals[-1]
+        y_i = y_vals[-1]
+        k1 = f(x_i, y_i)
+        k2 = f(x_i + h/2, y_i + h/2 * k1)
+        k3 = f(x_i + h/2, y_i + h/2 * k2)
+        k4 = f(x_i + h, y_i + h * k3)
+        y_next = y_i + h/6 * (k1 + 2*k2 + 2*k3 + k4)
+        x_next = x_i + h
+        x_vals.append(x_next)
+        y_vals.append(y_next)
+    return np.array(x_vals), np.array(y_vals)
+
+def milne_thomson_method(f, x_vals, y_start, h, n):
+    y_vals = list(y_start)
+    for i in range(3, n):
+        x_ip1 = x_vals[i+1]
+        y_pred = y_vals[i-3] + (4*h/3) * (
+            2*f(x_vals[i-2], y_vals[i-2]) -
+            f(x_vals[i-1], y_vals[i-1]) +
+            2*f(x_vals[i], y_vals[i])
+        )
+        y_corr = y_vals[i-1] + (h/3) * (
+            f(x_ip1, y_pred) +
+            4*f(x_vals[i], y_vals[i]) +
+            f(x_vals[i-1], y_vals[i-1])
+        )
+        y_vals.append(y_corr)
+    return np.array(x_vals[:len(y_vals)]), np.array(y_vals)
+
+#Monte Carlo
+def monte_carlo_method(f, x0, y0, h, n, simulations=1000, noise_std=0.01):
+    x_vals = np.array([x0 + i*h for i in range(n+1)])
+    y_aggregate = np.zeros(n+1)
+
+    for _ in range(simulations):
+        y_vals = [y0]
+        for i in range(n):
+            noise = np.random.normal(0, noise_std)
+            y_next = y_vals[-1] + h * f(x_vals[i], y_vals[-1]) + noise
+            y_vals.append(y_next)
+        y_aggregate += np.array(y_vals)
+
+    y_mean = y_aggregate / simulations
+    return x_vals, y_mean
+
+
+
+x0, y0 = 0, 1
+n = 15
+h= 0.05
+# Euler method
+x_euler, y_euler = euler_method(f, x0, y0, h, n)
+y_values = f2(x_euler)
+
+# Runge-kutta 4th order
+x_rk4, y_rk4 = rk4_method(f, x0, y0, h, n)
+
+# Milne-Thomson (first 4 points from RK4)
+x_milne, y_milne = milne_thomson_method(f, x_euler, y_rk4[:4], h, n)
+
+# Monte-Carlo method
+x_mc, y_mc = monte_carlo_method(f, x0, y0, h, n, simulations=1000, noise_std=0.005)
+
+print("RESULTS\n")
+
+table = PrettyTable()
+table.field_names = ["no:","x", "Analytical y", "Euler y", "RK4 y", "Milne-Thomson y", "Monte-Carlo y"]
+for i in range(len(x_euler)):
+    table.add_row([i,x_euler[i], y_values[i], y_euler[i], y_rk4[i], y_milne[i], y_mc[i]])
+print(table)
+
+plt.plot(x_euler,y_values,label='Analytical Solution',linestyle='dashed',color='green')
+plt.plot(x_euler, y_euler, marker='.', label="Euler's Method", color='orange')
+plt.scatter(x_rk4, y_rk4, marker='o', label='RK4 Method',color='blue')
+plt.scatter(x_milne, y_milne, marker='*', label='Milne-Thomson',color='red')
+plt.plot(x_mc, y_mc, label='Monte Carlo', linestyle=':', color='purple')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title("dy/dx = (x**2)*y")
+plt.grid(True)
+plt.legend()
+plt.show()
+
+# Perform independent t-test
+ttest_euler, p_value = ttest_ind(y_euler, y_values)
+ttest_rk4, p1_value = ttest_ind(y_rk4, y_values)
+ttest_milne, p2_value = ttest_ind(y_milne, y_values)
+
+print("\nT-test statistic for EULER:", ttest_euler)
+print("P-value:", p_value)
+print("\nT-test statistic for RK4:", ttest_rk4)
+print("P-value:", p1_value)
+print("\nT-test statistic for MILNE THOMSON:", ttest_milne)
+print("P-value:", p2_value)
+print("\n")
+# Results
+alpha = 0.05
+l1= [p_value,p1_value,p2_value]
+for i in l1:
+  if i < alpha:
+      print("Reject the null hypothesis: There is a significant difference between the observed and actual values.")
+  else:
+      print("Fail to reject the null hypothesis: There is no significant difference between the observed and actual values.")
