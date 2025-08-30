@@ -1,0 +1,38 @@
+# Problem A4
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+def sine_func(t):
+    return np.sin(t)
+
+true_integral = -np.cos(np.pi) - (-np.cos(0))
+
+def trap_integral(start, end, segments):
+    step_size = (end - start) / segments
+    t_vals = np.linspace(start, end, segments + 1)
+    f_vals = sine_func(t_vals)
+    integral = (step_size / 2) * (f_vals[0] + 2 * np.sum(f_vals[1:segments]) + f_vals[segments])
+    return integral
+
+def simpson_integral(start, end, segments):
+    if segments % 2 != 0:
+        segments += 1
+    step_size = (end - start) / segments
+    t_vals = np.linspace(start, end, segments + 1)
+    f_vals = sine_func(t_vals)
+    integral = (step_size / 3) * (f_vals[0] + f_vals[segments] + 4 * np.sum(f_vals[1:segments:2]) + 2 * np.sum(f_vals[2:segments-1:2]))
+    return integral
+
+lower_limit, upper_limit = 0, np.pi
+num_segments = 20
+
+trap_value = trap_integral(lower_limit, upper_limit, num_segments)
+simpson_value = simpson_integral(lower_limit, upper_limit, num_segments)
+
+trap_deviation = abs(true_integral - trap_value)
+simpson_deviation = abs(true_integral - simpson_value)
+
+print(f"True integral value: {true_integral:.6f}")
+print(f"Trapezoid method ({num_segments} segments): Value = {trap_value:.6f}, Error = {trap_deviation:.6f}")
+print(f"Simpson method ({num_segments} segments): Value = {simpson_value:.6f}, Error = {simpson_deviation:.6f}")
