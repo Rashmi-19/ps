@@ -1,0 +1,100 @@
+
+import numpy as np
+import matplotlib.pyplot as # Problem A7
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+def get_interpolation_points(N):
+    points = [0]
+    y_values = [1]
+    for j in range(1, N + 1):
+        points.append(j / N)
+        points.append(-j / N)
+        y_values.append(0)
+        y_values.append(0)
+    return np.array(points), np.array(y_values)
+
+def lagrange_interpolant(x_points, y_points, x):
+    n = len(x_points)
+    result = 0.0
+    for i in range(n):
+        term = y_points[i]
+        for j in range(n):
+            if j != i:
+                if x_points[j] != x_points[i]:
+                    term *= (x - x_points[j]) / (x_points[i] - x_points[j])
+        result += term
+    return result
+
+x_fine = np.linspace(-1, 1, 200)
+Ns = [2, 4, 6, 8, 12, 20]
+
+plt.figure(figsize=(10, 6))
+for N in Ns:
+    x_points, y_points = get_interpolation_points(N)
+    y_poly = [lagrange_interpolant(x_points, y_points, xi) for xi in x_fine]
+    plt.plot(x_fine, y_poly, label=f'N = {N}')
+
+plt.plot(0, 1, 'ro')
+for N in Ns:
+    for j in range(1, N + 1):
+        plt.plot(j / N, 0, 'bo')
+        plt.plot(-j / N, 0, 'bo')
+
+plt.xlabel('x')
+plt.ylabel('p_{2N}(x)')
+plt.title('Polynomial Interpolation for Different N')
+plt.legend()
+plt.grid(True)
+plt.ylim(-1.5, 1.5)
+plt.show()
+
+print("Observation with increasing N: As the value of N grows, the polynomial p_{2N}(x) starts to display more pronounced wiggles across the interval [-1, 1]. The number of points where the polynomial crosses zero increases, aligning with 2N roots (counting multiplicity at the origin). This behavior suggests a growing instability, where the polynomial swings more intensely near the edges, a pattern often linked to challenges in fitting high-degree polynomials to evenly distributed points.")
+
+def get_interpolation_points(N):
+    points = [0]
+    y_values = [1]
+    for j in range(1, N + 1):
+        points.append(j / N)
+        points.append(-j / N)
+        y_values.append(0)
+        y_values.append(0)
+    return np.array(points), np.array(y_values)
+
+def lagrange_interpolant(x_points, y_points, x):
+    n = len(x_points)
+    result = 0.0
+    for i in range(n):
+        term = y_points[i]
+        for j in range(n):
+            if j != i:
+                if x_points[j] != x_points[i]:
+                    term *= (x - x_points[j]) / (x_points[i] - x_points[j])
+        result += term
+    return result
+
+x_fine = np.linspace(-1, 1, 200)
+Ns = [2, 4, 6, 8, 12, 20]
+
+plt.figure(figsize=(10, 6))
+for N in Ns:
+    x_points, y_points = get_interpolation_points(N)
+    y_poly = [lagrange_interpolant(x_points, y_points, xi) for xi in x_fine]
+    plt.plot(x_fine, y_poly, label=f'N = {N}')
+
+plt.plot(0, 1, 'ro')
+for N in Ns:
+    for j in range(1, N + 1):
+        plt.plot(j / N, 0, 'bo')
+        plt.plot(-j / N, 0, 'bo')
+
+plt.xlabel('x')
+plt.ylabel('p_{2N}(x)')
+plt.title('Polynomial Interpolation for Different N')
+plt.legend()
+plt.grid(True)
+plt.ylim(-1.5, 1.5)
+plt.show()
+
+print("Observation with increasing N: As the value of N grows, the polynomial p_{2N}(x) starts to display more pronounced wiggles across the interval [-1, 1]. The number of points where the polynomial crosses zero increases, aligning with 2N roots (counting multiplicity at the origin). This behavior suggests a growing instability, where the polynomial swings more intensely near the edges, a pattern often linked to challenges in fitting high-degree polynomials to evenly distributed points.")
