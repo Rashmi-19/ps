@@ -1,0 +1,151 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import lagrange
+from scipy.stats import ttest_rel
+from numpy.polynomial.polynomial import Polynomial
+
+def diff_eqn(y, x):
+    return (4*x**2 - 3*x - 3*y)/x
+    # return x + y + (x*y)
+
+def analytical_solution(x):
+    return (4/5)*x**2 - (3/4)*x + 19/(20*x**3)
+
+x0 = 1
+y0 = 1
+xf = 3 # final x value
+n = 15
+h = (xf-x0)/n
+
+x_values = np.linspace(x0, xf, n)
+def euler_method(diff_eqn, x0, y0, x_values):
+    y = np.zeros(len(x_values))
+    y[0] = y0
+    for i in range(1, len(x_values)):
+        h = x_values[i] - x_values[i-1]
+        y[i] = y[i-1] + h*diff_eqn(y[i-1], x_values[i-1])
+    return y
+
+def rk4_method(diff_eqn, x0, y0, x_values):
+    y = np.zeros(len(x_values))
+    y[0] = y0
+    for i in range(1, len(x_values)):
+        h = x_values[i] - x_values[i-1]
+        k1 = h * diff_eqn(y[i-1], x_values[i-1])
+        k2 = h * diff_eqn(y[i-1]+k1/2, x_values[i-1]+h/2)
+        k3 = h * diff_eqn(y[i-1] + k2/2, x_values[i-1]+h/2)
+        k4 = h * diff_eqn(y[i-1]+k3, x_values[i-1]+h)
+        y[i] = y[i-1] + (k1 + 2*k2 + 2*k3 + k4)/6
+    return y
+
+def milne_thomson_method(diff_eqn, x0, y0, x_values):
+    y = np.zeros(len(x_values))
+    y[:4] = rk4_method(diff_eqn, x0, y0, x_values[:4])
+
+    for i in range(3, len(x_values)-1):
+        h = x_values[i] - x_values[i-1]
+        # Predictor
+        y_pred = y[i-3] + (4*h/3)*(2*diff_eqn(y[i], x_values[i]) -
+                                   diff_eqn(y[i-1], x_values[i-1]) +
+                                   2*diff_eqn(y[i-2], x_values[i-2]))
+        # Corrector
+        y[i+1] = y[i-1] + (h/3)*(diff_eqn(y_pred, x_values[i+1]) +
+                                 4*diff_eqn(y[i], x_values[i]) +
+                                 diff_eqn(y[i-1], x_values[i-1]))
+    return y
+y_analytical = analytical_solution(x_values)
+y_euler = euler_method(diff_eqn, x0, y0, x_values)
+y_rk4 = rk4_method(diff_eqn, x0, y0, x_values)
+y_milne = milne_thomson_method(diff_eqn, x0, y0, x_values)
+
+# Interpolating polynomials
+poly_euler = lagrange(x_values, y_euler)
+poly_rk4 = lagrange(x_values, y_rk4)
+poly_milne = lagrange(x_values, y_milne)
+
+print('Euler polynomial: ', Polynomial(poly_euler))
+print('\nRk4 polynomial: ', Polynomial(poly_rk4))
+print('\nMilne-Thomson polynomial: ', Polynomial(poly_milne))
+
+
+# Evaluate polynomials for smooth curves
+x_smooth = np.linspace(x0, xf, 100)
+
+y_euler_smooth = poly_euler(x_smooth)
+y_rk4_smooth = poly_rk4(x_smooth)
+y_milne_smooth = poly_milne(x_smooth)
+y_analytical_smooth = analytical_solution(x_smooth)
+
+plt.figure(figsize=(12, 8))
+plt.plot(x_smooth, y_analytical_smooth, 'k-', label='analytical solution')
+plt.plot(x_smooth, y_euler_smooth, 'r--', label='euler method')
+plt.plot(x_smooth, y_rk4_smooth, 'b-.', label='rk4 method')
+plt.plot(x_smooth, y_milne_smooth, 'g:', label='milne-thomson method')
+plt.scatter(x_values, y_analytical, c='k', marker='o', label='analytical points')
+plt.xlabel('x')
+plt.ylabel('y(x)')
+plt.title("Comparison of methods for xy' + 3y = 4x^2 - 3x")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# t-tests
+t_euler, p_euler = ttest_rel(y_euler, y_analytical)
+t_rk4, p_rk4 = ttest_rel(y_rk4, y_analytical)
+t_milne, p_milne = ttest_rel(y_milne, y_analytical)
+
+print(f"Euler method vs Analytical: t-statistic = {t_euler:.4f}, p-value = {p_euler:.4f}")
+print(f"Rk4 method vs Analytical: t-statistic = {t_rk4:.4f}, p-value = {p_rk4:.4f}")
+print(f"Milne-Thomson method vs Analytical: t-statistic = {t_milne:.4f}, p-value = {p_milne:.4f}")
+def monte_carlo_ode_solver(dy_dx, x0, y0, xf, n_samples=5000, n_points=15):
+    x_values = np.linspace(x0, xf, n_points)
+    y_values = np.zeros(n_points)
+    y_values[0] = y0
+
+    for i in range(1, n_points):
+        h = x_values[i] - x_values[i-1]
+        perturbations = np.random.normal(0, 0.05*(1 - i/n_points), n_samples)
+        paths = []
+        for _ in range(n_samples):
+            y_pred = y_values[i-1] + h * dy_dx(y_values[i-1] + perturbations[_], x_values[i-1])
+            paths.append(y_pred)
+        y_values[i] = np.mean(paths) # mean as estimate
+
+    return x_values, y_values
+
+x_mc, y_mc = monte_carlo_ode_solver(diff_eqn, x0, y0, xf)
+
+plt.figure(figsize=(12, 6))
+plt.plot(x_smooth, y_analytical_smooth, 'k-', label='Analytical Solution')
+plt.plot(x_mc, y_mc, 'ro-', label='Monte Carlo Solution')
+plt.xlabel('x')
+plt.ylabel('y(x)')
+plt.title("Monte Carlo Method for xy' + 3y = 4x^2 - 3x")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Comparison with analytical solution
+t_mc, p_mc = ttest_rel(y_mc, analytical_solution(x_mc))
+print(f"Monte Carlo vs Analytical: t-statistic = {t_mc:.4f}, p-value = {p_mc:.4f}")
+
+# Error comparison
+errors = {
+    'Euler': np.abs(y_euler - y_analytical),
+    'RK4': np.abs(y_rk4 - y_analytical),
+    'Milne-Thompson': np.abs(y_milne - y_analytical),
+    'Monte Carlo': np.abs(y_mc - analytical_solution(x_mc))
+}
+
+plt.figure(figsize=(12, 6))
+for method, error in errors.items():
+    if method == 'Monte Carlo':
+        plt.plot(x_mc, error, 'o-', label=method)
+    else:
+        plt.plot(x_values, error, 'o-', label=method)
+plt.xlabel('x')
+plt.ylabel('Absolute Error')
+plt.title("Error Comparison for xy' + 3y = 4x^2 - 3x")
+plt.legend()
+plt.grid(True)
+plt.show()
