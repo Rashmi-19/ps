@@ -1,0 +1,48 @@
+# Problem A2
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+actual_value = 0.977249868051821
+
+def gaussian(x):
+    return (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * x**2)
+
+def trap_method(start, end, num_points):
+    x_vals = np.linspace(start, end, num_points)
+    y_vals = gaussian(x_vals)
+    delta_x = (end - start) / (num_points - 1)
+    result = delta_x * (0.5 * y_vals[0] + 0.5 * y_vals[-1] + np.sum(y_vals[1:-1]))
+    return result
+
+def simpson_method(start, end, num_points):
+    if num_points % 2 == 1:
+        num_points += 1
+    x_vals = np.linspace(start, end, num_points)
+    y_vals = gaussian(x_vals)
+    delta_x = (end - start) / (num_points - 1)
+    result = (delta_x / 3) * (y_vals[0] + y_vals[-1] + 4 * np.sum(y_vals[1:-1:2]) + 2 * np.sum(y_vals[2:-2:2]))
+    return result
+
+lower_bound = -5
+upper_bound = 2
+points_2001 = 2001
+points_4001 = 4001
+
+trap_val_2001 = trap_method(lower_bound, upper_bound, points_2001)
+trap_diff_2001 = abs(trap_val_2001 - actual_value)
+print(f"Trapezoid Method (2001 points): Value = {trap_val_2001:.8f}, Error = {trap_diff_2001:.8f}")
+
+simp_val_2001 = simpson_method(lower_bound, upper_bound, points_2001)
+simp_diff_2001 = abs(simp_val_2001 - actual_value)
+print(f"Simpson Method (2001 points): Value = {simp_val_2001:.8f}, Error = {simp_diff_2001:.8f}")
+
+trap_val_4001 = trap_method(lower_bound, upper_bound, points_4001)
+trap_diff_4001 = abs(trap_val_4001 - actual_value)
+print(f"Trapezoid Method (4001 points): Value = {trap_val_4001:.8f}, Error = {trap_diff_4001:.8f}")
+
+simp_val_4001 = simpson_method(lower_bound, upper_bound, points_4001)
+simp_diff_4001 = abs(simp_val_4001 - actual_value)
+print(f"Simpson Method (4001 points): Value = {simp_val_4001:.8f}, Error = {simp_diff_4001:.8f}")
+
+print("Observation: Simpson's method typically achieves better accuracy than the trapezoid method due to its higher-order approximation. Doubling the points from 2001 to 4001 decreases errors in both methods, with Simpson's method showing a more pronounced reduction.")
