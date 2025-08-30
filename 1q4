@@ -1,0 +1,19 @@
+# 4th question
+
+import random
+
+total_points = 10000
+points_in_circle = 0
+
+for i in range(total_points):
+    x = random.uniform(0, 1)
+    y = random.uniform(0, 1)
+    distance_squared = x**2 + y**2
+    if distance_squared <= 1:
+        points_in_circle += 1
+
+pi_estimate = 4 * (points_in_circle / total_points)
+
+print(f"Number of points generated: {total_points}")
+print(f"Number of points inside the circle: {points_in_circle}")
+print(f"Estimated value of pi: {pi_estimate}")
