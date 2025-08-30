@@ -1,0 +1,69 @@
+# 5th question
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+def get_cubic_spline_coefficients(x_points, y_points):
+    n = len(x_points)
+    h = [x_points[i+1] - x_points[i] for i in range(n-1)]
+    b = [y_points[i+1] - y_points[i] for i in range(n-1)]
+    A = np.zeros((n, n))
+    v = np.zeros(n)
+    A[0, 0] = 1
+    A[n-1, n-1] = 1
+
+    for i in range(1, n-1):
+        A[i, i-1] = h[i-1] / 6
+        A[i, i] = (h[i-1] + h[i]) / 3
+        A[i, i+1] = h[i] / 6
+        v[i] = (b[i] / h[i]) - (b[i-1] / h[i-1])
+
+    M = np.linalg.solve(A, v)
+
+    coefficients = []
+    for i in range(n-1):
+        a = (M[i+1] - M[i]) / (6 * h[i])
+        b_coeff = M[i] / 2
+        c = (y_points[i+1] - y_points[i]) / h[i] - h[i] * (M[i+1] + 2 * M[i]) / 6
+        d = y_points[i]
+        coefficients.append((a, b_coeff, c, d))
+
+    return M, coefficients
+
+
+def evaluate_custom_spline(coefficients, x_points, x):
+    n = len(x_points)
+    for i in range(n - 1):
+        if x_points[i] <= x <= x_points[i+1]:
+            a, b, c, d = coefficients[i]
+            dx = x - x_points[i]
+            return a * dx**3 + b * dx**2 + c * dx + d
+
+    if x < x_points[0]:
+        a, b, c, d = coefficients[0]
+        dx = x - x_points[0]
+        return a * dx**3 + b * dx**2 + c * dx + d
+    elif x > x_points[-1]:
+        a, b, c, d = coefficients[-1]
+        dx = x - x_points[-2]
+        return a * dx**3 + b * dx**2 + c * dx + d
+    else:
+        return -1
+
+T = [0, 8, 16, 24, 32, 40]
+o = [14.621, 11.843, 9.870, 8.418, 7.305, 6.413]
+
+M, coefficients = get_cubic_spline_coefficients(T, o)
+print("M values (Second Derivatives):", M)
+print("Cubic Spline Coefficients (a, b, c, d) for each interval:", coefficients)
+
+T_fine = np.linspace(min(T), max(T), 100)
+o_fine_custom = [evaluate_custom_spline(coefficients, T, t) for t in T_fine]
+plt.scatter(T, o, label='Original Data')
+plt.plot(T_fine, o_fine_custom, label='Cubic Spline', linestyle='--')
+plt.xlabel('T')
+plt.ylabel('o, mg/L')
+plt.title('Cubic Spline Interpolation')
+plt.legend()
+plt.grid(True)
+plt.show()
