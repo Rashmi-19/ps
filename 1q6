@@ -1,0 +1,96 @@
+# 6th question
+
+simulation_duration = 1000
+inter_arrival_mean = 10
+service_time_min = 8
+service_time_max = 12
+
+arrival_times = []
+current_time = 0
+
+while current_time < simulation_duration:
+    inter_arrival_time = exponential(scale=inter_arrival_mean)
+    current_time += inter_arrival_time
+    if current_time < simulation_duration:
+        arrival_times.append(current_time)
+
+print(f"Generated {len(arrival_times)} customer arrivals within the simulation duration.")
+
+service_times = []
+
+for arrival_time in arrival_times:
+    service_time = -1
+    while not (service_time_min <= service_time <= service_time_max):
+        service_time = poisson(lam=10)
+    service_times.append(service_time)
+
+print(f"Generated {len(service_times)} service times.")
+
+start_service_times = []
+finish_service_times = []
+waiting_times = []
+server_busy_until = 0
+
+for i in range(len(arrival_times)):
+    arrival_time = arrival_times[i]
+    service_time = service_times[i]
+
+    start_service_time = max(arrival_time, server_busy_until)
+    waiting_time = start_service_time - arrival_time
+    finish_service_time = start_service_time + service_time
+
+    start_service_times.append(start_service_time)
+    finish_service_times.append(finish_service_time)
+    waiting_times.append(waiting_time)
+
+    server_busy_until = finish_service_time
+
+print(f"Generated {len(start_service_times)} start service times.")
+print(f"Generated {len(finish_service_times)} finish service times.")
+print(f"Generated {len(waiting_times)} waiting times.")
+
+average_waiting_time = sum(waiting_times) / len(waiting_times)
+
+arrival_rate = len(arrival_times) / simulation_duration
+average_number_waiting = arrival_rate * average_waiting_time
+
+total_service_time = sum(service_times)
+average_utilization = total_service_time / simulation_duration
+
+print(f"Average customer waiting time: {average_waiting_time:.2f} minutes")
+print(f"Average number of customers waiting: {average_number_waiting:.2f}")
+print(f"Average booking station utilization: {average_utilization:.2f}")
+
+events = []
+for arrival_time in arrival_times:
+    events.append((arrival_time, 1))
+
+for finish_time in finish_service_times:
+    events.append((finish_time, -1))
+
+events.sort(key=lambda x: x[0])
+
+time_points = [0]
+queue_lengths = [0]
+current_queue_length = 0
+current_time = 0
+
+for event_time, event_type in events:
+    if event_time > current_time:
+        time_points.append(event_time)
+        queue_lengths.append(current_queue_length)
+
+    current_time = event_time
+    current_queue_length += event_type
+
+    time_points.append(current_time)
+    queue_lengths.append(current_queue_length)
+
+
+plt.figure(figsize=(12, 6))
+plt.step(time_points, queue_lengths, where='post')
+plt.xlabel('Time')
+plt.ylabel('Number of Customers in Queue')
+plt.title('Queue Length Over Time')
+plt.grid(True)
+plt.show()
