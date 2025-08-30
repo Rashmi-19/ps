@@ -1,0 +1,37 @@
+# Problem A5
+
+import numpy as np
+from scipy import integrate
+import matplotlib.pyplot as plt
+
+def gaussian_func(z):
+    return np.exp(-z**2)
+
+def trap_approximation(lower, upper, num_intervals):
+    z_vals = np.linspace(lower, upper, num_intervals + 1)
+    f_vals = gaussian_func(z_vals)
+    step = (upper - lower) / num_intervals
+    result = (step / 2) * (f_vals[0] + 2 * np.sum(f_vals[1:num_intervals]) + f_vals[num_intervals])
+    return result
+
+start = 0
+end = 1
+intervals_100 = 100
+intervals_200 = 200
+
+approx_100 = trap_approximation(start, end, intervals_100)
+approx_200 = trap_approximation(start, end, intervals_200)
+
+print(f"Approximation with 100 intervals: {approx_100:.6f}")
+print(f"Approximation with 200 intervals: {approx_200:.6f}")
+
+exact_integral, _ = integrate.quad(gaussian_func, start, end)
+deviation_100 = abs(approx_100 - exact_integral)
+deviation_200 = abs(approx_200 - exact_integral)
+step_100 = 1 / intervals_100
+step_200 = 1 / intervals_200
+accuracy_order = np.log(deviation_100 / deviation_200) / np.log(step_100 / step_200)
+
+print(f"\nError (100 intervals): {deviation_100:.6f}")
+print(f"\nError (200 intervals): {deviation_200:.6f}")
+print(f"\nComputed order of accuracy: {accuracy_order:.6f}")
