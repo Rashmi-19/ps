@@ -1,0 +1,51 @@
+# 3rd question
+
+import matplotlib.pyplot as plt
+from numpy.random import uniform, exponential, weibull, triangular
+
+sample_sizes = [500, 1000, 10000, 100000]
+random_data = {}
+
+# Uniform distribution
+random_data['Uniform'] = {}
+for size in sample_sizes:
+    random_data['Uniform'][size] = uniform(size=size)
+
+# Exponential distribution
+random_data['Exponential'] = {}
+for size in sample_sizes:
+    random_data['Exponential'][size] = exponential(size=size)
+
+# Weibull distribution
+random_data['Weibull'] = {}
+k = 5.0
+for size in sample_sizes:
+    random_data['Weibull'][size] = weibull(k, size=size)
+
+# Triangular distribution
+random_data['Triangular'] = {}
+left = 0
+mode = 0.5
+right = 1.0
+for size in sample_sizes:
+    random_data['Triangular'][size] = triangular(left, mode, right, size=size)
+
+print("Random data generated for the following distributions and sample sizes:")
+for dist, sizes_data in random_data.items():
+    print(f"- {dist}:")
+    for size, data in sizes_data.items():
+        print(f"  - Sample size {size}: {len(data)} numbers generated")
+
+for distribution, sizes_data in random_data.items():
+    for size, data in sizes_data.items():
+        plt.figure(figsize=(10, 6))
+        counts, bins, patches = plt.hist(data, bins='auto', density=True, alpha=0.7, label='Histogram')
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        plt.plot(bin_centers, counts, marker='o', linestyle='-', label='Frequency Polygon')
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        plt.plot(bin_centers, counts, marker='o', linestyle='-', label='Frequency Polygon')
+        plt.xlabel('Value')
+        plt.ylabel('Frequency')
+        plt.title(f'Histogram of {distribution} Distribution (Sample Size: {size})')
+        plt.grid(True)
+        plt.show()
