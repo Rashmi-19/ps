@@ -1,0 +1,37 @@
+# 2nd question
+
+import matplotlib.pyplot as plt
+
+def digoxin_decay(initial_concentration, dosage, decay_factor, num_days):
+    concentrations = [initial_concentration]
+    for _ in range(num_days - 1)
+        decayed_concentration = concentrations[-1] * decay_factor
+        new_concentration = decayed_concentration + dosage
+        concentrations.append(new_concentration)
+    return concentrations
+
+decay_factor = 0.5
+num_days = 100
+initial_concentration = 0
+
+dosage1 = 0.1
+concentrations1 = digoxin_decay(initial_concentration, dosage1, decay_factor, num_days)
+
+dosage2 = 0.2
+concentrations2 = digoxin_decay(initial_concentration, dosage2, decay_factor, num_days)
+
+dosage3 = 0.3
+concentrations3 = digoxin_decay(initial_concentration, dosage3, decay_factor, num_days)
+
+plt.figure(figsize=(12, 8))
+
+plt.plot(range(num_days), concentrations1, label=f'Dosage = {dosage1} mg')
+plt.plot(range(num_days), concentrations2, label=f'Dosage = {dosage2} mg')
+plt.plot(range(num_days), concentrations3, label=f'Dosage = {dosage3} mg')
+
+plt.xlabel('Day')
+plt.ylabel('Digoxin Concentration (mg)')
+plt.title('Digoxin Concentration in Bloodstream Over Time with Daily Dosage')
+plt.legend()
+plt.grid(True)
+plt.show()
