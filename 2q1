@@ -1,0 +1,51 @@
+# 1st question
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+n = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+an = [3, 6, 11, 21, 32, 47, 65, 87, 112, 110, 171, 204, 241, 282, 325, 376]
+delta_an = [3]
+for i in range(1,16):
+    delta_an.append(an[i] - an[i-1])
+print("Delta an : ", delta_an)
+
+plt.plot(n, delta_an)
+plt.title("Delta an vs n")
+plt.xlabel("n")
+plt.ylabel("Delta an")
+plt.show()
+
+plt.plot(n, an)
+plt.title("n vs an")
+plt.xlabel("n")
+plt.ylabel("an")
+plt.show()
+
+'''Does the graph reasonably approximate linear relationship'''
+
+#The graph reasonably approximate linear relationship
+
+quad_equation = np.polyfit(n, an, 2)
+print("Coefficient of the equation : ", quad_equation)
+a = quad_equation[0]
+b = quad_equation[1]
+c = quad_equation[2]
+
+predicted_an = []
+for i in range(16):
+    predicted_an.append(a*n[i]*n[i] + b*n[i] + c)
+
+plt.plot(n, predicted_an)
+plt.title("Predicted an vs n")
+plt.xlabel("n")
+plt.ylabel("Predicted an")
+plt.show()
+
+errors = [an[i] - predicted_an[i] for i in range(16)]
+
+plt.plot(n, errors)
+plt.title("Errors in predicted an vs n")
+plt.xlabel("n")
+plt.ylabel("Errors")
+plt.show()
