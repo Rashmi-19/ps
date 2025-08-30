@@ -1,0 +1,135 @@
+# 4th question
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.array([2, 2.5, 3, 3.5, 4])
+y = np.array([1, np.sqrt(2) - 1, -1, np.sqrt(2) - 1, 1])
+
+def true_function(x):
+    return 2 * np.sqrt(np.abs(x - 3)) - 1
+
+x_fine = np.linspace(2, 4, 200)
+y_true = true_function(x_fine)
+
+def linear_spline(x_points, y_points, x):
+    n = len(x_points)
+    for i in range(n - 1):
+        if x_points[i] <= x <= x_points[i + 1]:
+            slope = (y_points[i + 1] - y_points[i]) / (x_points[i + 1] - x_points[i])
+            return y_points[i] + slope * (x - x_points[i])
+    if x < x_points[0]:
+        slope = (y_points[1] - y_points[0]) / (x_points[1] - x_points[0])
+        return y_points[0] + slope * (x - x_points[0])
+    elif x > x_points[-1]:
+        slope = (y_points[-1] - y_points[-2]) / (x_points[-1] - x_points[-2])
+        return y_points[-1] + slope * (x - x_points[-1])
+    return -1
+
+y_linear = np.array([linear_spline(x, y, xi) for xi in x_fine])
+
+def get_cubic_spline_coefficients(x_points, y_points):
+    n = len(x_points)
+    h = [x_points[i + 1] - x_points[i] for i in range(n - 1)]
+    b = [y_points[i + 1] - y_points[i] for i in range(n - 1)]
+    A = np.zeros((n, n))
+    v = np.zeros(n)
+    A[0, 0] = 1
+    A[n - 1, n - 1] = 1
+
+    for i in range(1, n - 1):
+        A[i, i - 1] = h[i - 1] / 6
+        A[i, i] = (h[i - 1] + h[i]) / 3
+        A[i, i + 1] = h[i] / 6
+        v[i] = (b[i] / h[i]) - (b[i - 1] / h[i - 1])
+
+    M = np.linalg.solve(A, v)
+
+    coefficients = []
+    for i in range(n - 1):
+        a = (M[i + 1] - M[i]) / (6 * h[i])
+        b_coeff = M[i] / 2
+        c = (y_points[i + 1] - y_points[i]) / h[i] - h[i] * (M[i + 1] + 2 * M[i]) / 6
+        d = y_points[i]
+        coefficients.append((a, b_coeff, c, d))
+
+    return M, coefficients
+
+def evaluate_custom_spline(coefficients, x_points, x):
+    n = len(x_points)
+    for i in range(n - 1):
+        if x_points[i] <= x <= x_points[i + 1]:
+            a, b, c, d = coefficients[i]
+            dx = x - x_points[i]
+            return a * dx**3 + b * dx**2 + c * dx + d
+    if x < x_points[0]:
+        a, b, c, d = coefficients[0]
+        dx = x - x_points[0]
+        return a * dx**3 + b * dx**2 + c * dx + d
+    elif x > x_points[-1]:
+        a, b, c, d = coefficients[-1]
+        dx = x - x_points[-2]
+        return a * dx**3 + b * dx**2 + c * dx + d
+    return -1
+
+_, cubic_coeffs = get_cubic_spline_coefficients(x, y)
+y_cubic = np.array([evaluate_custom_spline(cubic_coeffs, x, xi) for xi in x_fine])
+
+def lagrange_interpolant(x_points, y_points, x):
+    n = len(x_points)
+    result = 0.0
+    for i in range(n):
+        term = y_points[i]
+        for j in range(n):
+            if j != i:
+                term *= (x - x_points[j]) / (x_points[i] - x_points[j])
+        result += term
+    return result
+
+y_poly = np.array([lagrange_interpolant(x, y, xi) for xi in x_fine])
+
+plt.figure(figsize=(10, 6))
+plt.plot(x_fine, y_true, 'k-', label='True Function')
+plt.plot(x_fine, y_linear, 'r--', label='Linear Spline')
+plt.plot(x_fine, y_cubic, 'g-.', label='Cubic Spline')
+plt.plot(x_fine, y_poly, 'b:', label='Polynomial Interpolant')
+plt.plot(x, y, 'bo', label='Data Points')
+plt.legend()
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Function Interpolation')
+plt.grid(True)
+plt.ylim(-1.5, 1.5)
+plt.show()
+
+x_test = 2.125
+y_true_test = true_function(x_test)
+y_linear_test = linear_spline(x, y, x_test)
+y_cubic_test = evaluate_custom_spline(cubic_coeffs, x, x_test)
+y_poly_test = lagrange_interpolant(x, y, x_test)
+
+linear_error = abs(y_true_test - y_linear_test)
+cubic_error = abs(y_true_test - y_cubic_test)
+poly_error = abs(y_true_test - y_poly_test)
+
+print(f"True value at x = 2.125: {y_true_test:.6f}")
+print(f"Linear spline error: {linear_error:.6f}")
+print(f"Cubic spline error: {cubic_error:.6f}")
+print(f"Polynomial error: {poly_error:.6f}")
+
+x_refined = np.linspace(2, 4, 9)
+y_refined = true_function(x_refined)
+_, cubic_coeffs_refined = get_cubic_spline_coefficients(x_refined, y_refined)
+y_linear_refined = np.array([linear_spline(x_refined, y_refined, xi) for xi in x_fine])
+y_cubic_refined = np.array([evaluate_custom_spline(cubic_coeffs_refined, x_refined, xi) for xi in x_fine])
+
+linear_error_refined = np.mean(abs(y_true - y_linear_refined))
+cubic_error_refined = np.mean(abs(y_true - y_cubic_refined))
+
+h = (x[1] - x[0])
+h_refined = (x_refined[1] - x_refined[0])
+linear_conv_rate = np.log(linear_error_refined / linear_error) / np.log(h_refined / h)
+cubic_conv_rate = np.log(cubic_error_refined / cubic_error) / np.log(h_refined / h)
+
+print(f"Approximate convergence rate - Linear: {linear_conv_rate:.2f}")
+print(f"Approximate convergence rate - Cubic: {cubic_conv_rate:.2f}")
