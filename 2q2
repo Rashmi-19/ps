@@ -1,0 +1,141 @@
+# 2nd question
+
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+from collections import defaultdict
+import scipy.stats as stats
+
+def forward_difference_table(y):
+    n = len(y)
+    diff_table = [y]
+    for i in range(1, n):
+        prev = diff_table[-1]
+        diff = [prev[j + 1] - prev[j] for j in range(len(prev) - 1)]
+        diff_table.append(diff)
+    return diff_table
+
+def newton_forward_interpolation(x_points, y_points, x, forward_diff_table):
+    h = x_points[1] - x_points[0]
+    u = (x - x_points[0]) / h
+
+    result = forward_diff_table[0][0]
+    u_term = 1
+
+    for i in range(1, len(forward_diff_table)):
+        u_term *= (u - (i - 1)) / i
+        result += forward_diff_table[i][0] * u_term
+
+    return result
+
+def calculate_strech_value(force, stretch, x_targets):
+
+    diff_table = forward_difference_table(stretch)
+
+    print("Forward Divided difference table")
+    n = len(stretch)
+    for i in range(n):
+        row_output = []
+        for j in range(n - i):
+            row_output.append(diff_table[j][i])
+        print(row_output)
+
+    x_range = np.linspace(min(force), max(force), 100)
+    y_interpolated = [newton_forward_interpolation(force, stretch, x, diff_table) for x in x_range]
+
+    y_targets = [newton_forward_interpolation(force, stretch, x, diff_table) for x in x_targets]
+
+    for i in range(len(x_targets)):
+        print("Force : ", x_targets[i], "Strech :", y_targets[i])
+
+    plt.plot(force, stretch, 'o', label='Original Data')
+    plt.plot(x_range, y_interpolated, '-', label='Interpolating Polynomial')
+    plt.scatter(x_targets, y_targets, color='red', label='Interpolation Points')
+    plt.xlabel('Force')
+    plt.ylabel('Stretch')
+    plt.title('Newton Forward Interpolation')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    return diff_table
+
+def calculate_error(y_actual, y_targets, x_targets):
+    error = [y_actual[i] - y_targets[i] for i in range(len(y_targets))]
+    print("Errors :: ", error)
+    plt.plot(x_targets, error, 'o', label='Error')
+    plt.xlabel('Force')
+    plt.ylabel('Error')
+    plt.title('Force vs Error')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    return error
+
+
+def ttest(errors):
+    t_stat, p_value = stats.ttest_1samp(errors, 0)
+
+    print("Performing one-sample t-test (H₀: Mean error = 0)")
+    print(f"T-statistic: {t_stat:.4f}")
+    print(f"P-value: {p_value:.4f}")
+
+    if p_value < 0.05:
+        print("Conclusion: Reject the null hypothesis at the 5% significance level.")
+        print("Interpretation: The mean error is significantly different from zero — indicates a poor model fit.")
+    else:
+        print("Conclusion: Fail to reject the null hypothesis at the 5% significance level.")
+        print("Interpretation: The mean error is not significantly different from zero — indicates a good model fit.")
+
+
+force = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+stretch = [19, 57, 94, 134, 173, 216, 256, 297, 343]
+x_targets = [15, 17, 85]
+total_x = force.copy()
+total_x.extend(x_targets)
+
+diff_table = calculate_strech_value(force, stretch, x_targets)
+
+errors = []
+coeffs_linear = np.polyfit(force, stretch, 1)
+m_linear = coeffs_linear[0]
+c_linear = coeffs_linear[1]
+k_approx = 1 / m_linear
+print("Approximate value of k :: ", k_approx)
+for x in x_targets:
+    stretch.append(x//k_approx )
+y_predicted = []
+for x in total_x:
+    y_predicted.append(newton_forward_interpolation(force, stretch, x, diff_table))
+print("Strech values :: ", stretch)
+print("Y predicted :: ", y_predicted)
+errors = calculate_error(stretch, y_predicted, total_x)
+print("\n--------------------------------------------------------------------------\n")
+ttest(errors)
+print("\n--------------------------------------------------------------------------\n")
+
+k_values = []
+while len(k_values) < 5:
+    a = random.uniform(1,5)
+    if a not in k_values:
+        k_values.append(a)
+
+for i in k_values:
+    y_values = []
+    errors = []
+    for x in force:
+        y_values.append(x/i)
+    print("K value :: ", i)
+    diff_table = calculate_strech_value(force, y_values, x_targets)
+    print("\n--------------------------------------------------------------------------\n")
+    for x in x_targets:
+        y_values.append(x/i)
+    y_predicted = []
+    for x in total_x:
+        y_predicted.append(newton_forward_interpolation(force, y_values, x, diff_table))
+    print("Y values :: ", y_values)
+    print("Y predicted :: ", y_predicted)
+    errors = calculate_error(y_values, y_predicted, total_x)
+    print("\n--------------------------------------------------------------------------\n")
+    ttest(errors)
+    print("\n--------------------------------------------------------------------------\n")
