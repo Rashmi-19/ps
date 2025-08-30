@@ -1,0 +1,99 @@
+# 3rd question
+
+def emittance_function(t):
+  return 0.02424 * (t / 303.16)**1.27591
+
+def newton_divided_difference(x_points, y_points):
+    n = len(x_points)
+    divided_diff = [list(y_points)]
+
+    for k in range(1, n):
+        row = []
+        for i in range(n - k):
+            diff = (divided_diff[k - 1][i + 1] - divided_diff[k - 1][i]) / (x_points[i + k] - x_points[i])
+            row.append(diff)
+        divided_diff.append(row)
+
+    coefficients = [divided_diff[k][0] for k in range(n)]
+    return coefficients
+
+def evaluate_newton_polynomial(coefficients, x_points, x):
+    n = len(x_points)
+    result = coefficients[0]
+    product_term = 1.0
+
+    for i in range(1, n):
+        product_term *= (x - x_points[i - 1])
+        result += coefficients[i] * product_term
+
+    return result
+
+temperature = [300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000]
+emittance = [0.024, 0.035, 0.046, 0.058, 0.067, 0.083, 0.097, 0.111, 0.125, 0.140, 0.155, 0.170, 0.186, 0.202, 0.219, 0.235, 0.252, 0.269]
+
+newton_coeffs = newton_divided_difference(temperature, emittance)
+print("Newton Coefficients:", newton_coeffs)
+
+temperature_range = np.linspace(min(temperature), max(temperature), 100)
+
+original_emittance_values = [emittance_function(t) for t in temperature_range]
+
+interpolated_emittance_values = [evaluate_newton_polynomial(newton_coeffs, temperature, t) for t in temperature_range]
+
+print("Original Emittance Values:", original_emittance_values)
+print("Interpolated Emittance Values:", interpolated_emittance_values)
+
+
+plt.plot(temperature_range, original_emittance_values, label='Original Function')
+plt.plot(temperature_range, interpolated_emittance_values, label='Interpolating Polynomial', linestyle='--')
+
+plt.title("Comparison of Original Emittance Function and Interpolating Polynomial")
+plt.xlabel("Temperature")
+plt.ylabel("Emittance")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+emittance_at_0_5_newton = evaluate_newton_polynomial(newton_coeffs, temperature, 0.5)
+emittance_at_3_newton = evaluate_newton_polynomial(newton_coeffs, temperature, 3.0)
+
+print("Emittance at T = 0.5 using Newton's Divided Difference: ", emittance_at_0_5_newton)
+print("Emittance at T = 3.0 using Newton's Divided Difference: ", emittance_at_3_newton)
+
+def lagrange_interpolation(x_points, y_points, x):
+    n = len(x_points)
+    result = 0.0
+
+    for i in range(n):
+        term = y_points[i]
+        for j in range(n):
+            if i != j:
+                term *= (x - x_points[j]) / (x_points[i] - x_points[j])
+        result += term
+    return result
+
+temperature_range = np.linspace(min(temperature), max(temperature), 100)
+
+original_emittance_values = [emittance_function(t) for t in temperature_range]
+
+interpolated_emittance_values = [lagrange_interpolation(temperature, emittance, t) for t in temperature_range]
+
+print("Original Emittance Values:", original_emittance_values)
+print("Interpolated Emittance Values:", interpolated_emittance_values)
+
+
+plt.plot(temperature_range, original_emittance_values, label='Original Function')
+plt.plot(temperature_range, interpolated_emittance_values, label='Interpolating Polynomial', linestyle='--')
+
+plt.title("Comparison of Original Emittance Function and Interpolating Polynomial")
+plt.xlabel("Temperature")
+plt.ylabel("Emittance")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+emittance_at_0_5_lagrange = lagrange_interpolation(temperature, emittance, 0.5)
+emittance_at_3_lagrange = lagrange_interpolation(temperature, emittance, 3.0)
+
+print("Emittance at T = 0.5 using Lagrange's Interpolation: ", emittance_at_0_5_lagrange)
+print("Emittance at T = 3.0 using Lagrange's Interpolation: ", emittance_at_3_lagrange)
