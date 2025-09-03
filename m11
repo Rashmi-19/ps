@@ -1,0 +1,113 @@
+import numpy as np
+import pandas as pd
+import pprint
+import re
+import string
+from collections import defaultdict, Counter
+
+"""# os dir"""
+
+with open('/content/doc_1.txt', 'r') as file:
+    doc1 = file.read()
+
+with open('/content/doc_2.txt','r') as file:
+    doc2 = file.read()
+
+"""# PREPROCESSING"""
+
+token_1 = doc1.lower()
+token_1 = re.sub(f"[{re.escape(string.punctuation)}]", " ", token_1)
+token_1 = token_1.split()
+
+token_2 = doc2.lower()
+token_2 = re.sub(f"[{re.escape(string.punctuation)}]", " ", token_2)
+token_2 = token_2.split()
+
+"""# INVERTED INDEX - BOOLEAN"""
+
+token_1 = sorted(token_1)
+token_2 = sorted(token_2)
+
+terms=list(set(token_1+token_2))
+
+inverted_index={}
+for term in terms:
+  inverted_index[term]=[]
+  if term in token_1:
+    inverted_index[term].append('doc_1')
+  if term in token_2:
+    inverted_index[term].append('doc_2')
+
+pprint.pprint(inverted_index)
+
+freq = Counter(terms)
+stop_words = set([w for w, _ in freq.most_common(10)])
+for sw in stop_words:
+    inverted_index.pop(sw, None)
+
+pprint.pprint(stop_words)
+
+print(len(inverted_index))
+
+def boolean_retrieve(term, index, docs):
+    if term not in index:
+        return set()
+    return set(index[term])
+
+def eval_query(tokens, index, docs):
+    stack = []
+
+    def apply_operator(op):
+        if op == "NOT":
+            right = stack.pop()
+            stack.append(docs - right)
+        else:
+            right = stack.pop()
+            left = stack.pop()
+            if op == "AND":
+                stack.append(left & right)
+            elif op == "OR":
+                stack.append(left | right)
+
+    precedence = {"NOT": 3, "AND": 2, "OR": 1}
+    output = []
+    ops = []
+
+    # Shunting-yard algorithm for parentheses and precedence
+    for token in tokens:
+        if token not in precedence and token not in ("(", ")"):
+            output.append(token)
+        elif token in precedence:
+            while ops and ops[-1] in precedence and precedence[ops[-1]] >= precedence[token]:
+                output.append(ops.pop())
+            ops.append(token)
+        elif token == "(":
+            ops.append(token)
+        elif token == ")":
+            while ops and ops[-1] != "(":
+                output.append(ops.pop())
+            ops.pop()
+
+    while ops:
+        output.append(ops.pop())
+
+    # Evaluate postfix expression
+    for token in output:
+        if token not in precedence:
+            stack.append(boolean_retrieve(token.lower(), index, docs))
+        else:
+            apply_operator(token)
+
+    return stack[-1] if stack else set()
+
+def boolean_query(query, index, docs):
+    tokens = query.upper().replace("(", " ( ").replace(")", " ) ").split()
+    return eval_query(tokens, index, set(docs.keys()))
+
+documents = { 'doc_1': doc1 , 'doc_2':doc2}
+print("\nQuery Results:")
+print("energy AND renewable ->", boolean_query("energy AND renewable", inverted_index, documents))
+print("artificial OR climate ->", boolean_query("artificial OR climate", inverted_index, documents))
+print("NOT energy ->", boolean_query("NOTenergy", inverted_index, documents))
+print("(renewable AND artificial) OR innovation ->", boolean_query("(renewable AND artificial) OR innovation", inverted_index, documents))
+print("renewable AND NOT climate ->", boolean_query("renewable AND NOT climate", inverted_index, documents))
