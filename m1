@@ -1,0 +1,112 @@
+# vector space
+import math
+from collections import Counter
+
+# ---------- Preprocessing ----------
+def preprocess(docs):
+    processed = []
+    vocab_set = set()
+    
+    for doc in docs:
+        tokens = doc.lower().split()
+        processed.append(tokens)
+        vocab_set.update(tokens)
+    
+    vocab = sorted(vocab_set)
+    
+    # Build TF matrix
+    tf_matrix = []
+    for doc_tokens in processed:
+        counts = Counter(doc_tokens)
+        tf_row = [counts.get(term, 0) for term in vocab]
+        tf_matrix.append(tf_row)
+    
+    return vocab, tf_matrix
+
+
+# ---------- IDF ----------
+def compute_idf(tf_matrix, vocab):
+    N = len(tf_matrix)
+    idf = []
+    for term_idx in range(len(vocab)):
+        df = sum(1 for doc in tf_matrix if doc[term_idx] > 0)
+        idf.append(math.log(N / df) if df > 0 else 0)
+    return idf
+
+
+# ---------- TF-IDF ----------
+def compute_tfidf(tf_matrix, idf):
+    return [[tf * idf[i] for i, tf in enumerate(doc)] for doc in tf_matrix]
+
+
+# ---------- Query Vector ----------
+def query_to_vector(query, vocab, idf):
+    query_tf = Counter(query.lower().split())
+    return [query_tf.get(term, 0) * idf[i] for i, term in enumerate(vocab)]
+
+
+# ---------- Similarities ----------
+def cosine_similarity(v1, v2):
+    dot = sum(a * b for a, b in zip(v1, v2))
+    mag1 = math.sqrt(sum(a * a for a in v1))
+    mag2 = math.sqrt(sum(a * a for a in v2))
+    return dot / (mag1 * mag2) if mag1 and mag2 else 0
+
+
+def jaccard_coefficient(v1, v2):
+    b1 = [1 if x > 0 else 0 for x in v1]
+    b2 = [1 if x > 0 else 0 for x in v2]
+    intersection = sum(a & b for a, b in zip(b1, b2))
+    union = sum(a | b for a, b in zip(b1, b2))
+    return intersection / union if union > 0 else 0
+
+
+def dice_coefficient(v1, v2):
+    b1 = [1 if x > 0 else 0 for x in v1]
+    b2 = [1 if x > 0 else 0 for x in v2]
+    intersection = sum(a & b for a, b in zip(b1, b2))
+    total = sum(b1) + sum(b2)
+    return (2 * intersection) / total if total > 0 else 0
+
+
+def dot_product(v1, v2):
+    return sum(a * b for a, b in zip(v1, v2))
+
+
+# ---------- Search ----------
+def search(query, vocab, idf, tfidf_matrix, similarity='cosine', top_k=5):
+    qvec = query_to_vector(query, vocab, idf)
+    
+    similarities = []
+    for doc_id, dvec in enumerate(tfidf_matrix):
+        if similarity == 'cosine':
+            sim = cosine_similarity(qvec, dvec)
+        elif similarity == 'jaccard':
+            sim = jaccard_coefficient(qvec, dvec)
+        elif similarity == 'dice':
+            sim = dice_coefficient(qvec, dvec)
+        elif similarity == 'dot':
+            sim = dot_product(qvec, dvec)
+        else:
+            sim = cosine_similarity(qvec, dvec)
+        
+        similarities.append((doc_id, sim))
+    
+    similarities.sort(key=lambda x: x[1], reverse=True)
+    return similarities[:top_k]
+
+
+# ---------- Usage ----------
+docs = ["information retrieval system", "machine learning data", "web search engine"]
+
+# Build model once
+vocab, tf_matrix = preprocess(docs)
+idf = compute_idf(tf_matrix, vocab)
+tfidf_matrix = compute_tfidf(tf_matrix, idf)
+
+
+# Different similarity measures
+print("Cosine:", search("information system", vocab, idf, tfidf_matrix, 'cosine'))
+print("Jaccard:", search("information system", vocab, idf, tfidf_matrix, 'jaccard'))
+print("Dice:", search("information system", vocab, idf, tfidf_matrix, 'dice'))
+print("Dot Product:", search("information system", vocab, idf, tfidf_matrix, 'dot'))
