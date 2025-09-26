@@ -1,0 +1,387 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+years = [1992, 1993, 1994, 1995]
+quarters = ['Winter','Spring', 'Summer', 'Fall']
+data = [
+    [293, 246, 231, 282],
+    [301, 252, 227, 291],
+    [304, 259, 239, 296],
+    [306, 265, 240, 300]
+]
+
+xlabel = [i + str(j)[2:4] for j in years for i in quarters]
+
+fdata = []
+for i in data:
+    fdata.extend(i)
+
+# Moving average (4-term)
+m_a = [math.nan]*2
+for i in range(2, len(fdata)-1):
+    moving_avg = round((fdata[i-2] + fdata[i-1] + fdata[i] + fdata[i+1]) / 4, 4)
+    m_a.append(moving_avg)
+m_a.extend([math.nan])
+
+# Centered moving average
+c_ma = [math.nan]*2
+for i in range(2, len(fdata)-2):
+    cma = round((m_a[i] + m_a[i+1]) / 2, 4)
+    c_ma.append(cma)
+c_ma.extend([math.nan, math.nan])
+
+# % of actual to moving average
+actTomov = [math.nan]*2
+for i in range(2, len(fdata)-2):
+    actTomov.append(round((fdata[i] / c_ma[i]) * 100, 4))
+actTomov.extend([math.nan]*2)
+
+# Seasonal indices and modified seasonal indices
+modified_mean = {'Spring': [], 'Summer': [], 'Fall': [], 'Winter': []}
+for i in range(0, len(actTomov), 4):
+    if not math.isnan(actTomov[i]):
+        modified_mean['Spring'].append(actTomov[i])
+    if not math.isnan(actTomov[i+1]):
+        modified_mean['Summer'].append(actTomov[i+1])
+    if not math.isnan(actTomov[i+2]):
+        modified_mean['Fall'].append(actTomov[i+2])
+    if not math.isnan(actTomov[i+3]):
+        modified_mean['Winter'].append(actTomov[i+3])
+
+print('Before removing min and max val in each quarter:')
+print(modified_mean)
+
+mean = {}
+for i in quarters:
+    if len(modified_mean[i]) > 0:
+        if len(modified_mean[i]) > 2:
+            maxVal = max(modified_mean[i])
+            minVal = min(modified_mean[i])
+            modified_mean[i].remove(maxVal)
+            modified_mean[i].remove(minVal)
+        mean[i] = round(sum(modified_mean[i]) / len(modified_mean[i]), 4)
+    else:
+        mean[i] = round(sum(modified_mean[i]) / len(modified_mean[i]), 4)
+
+print('After removing min and max val in each quarter:')
+print(modified_mean)
+print('Modified Mean for each quarter:', mean)
+print('Total of indices:', round(sum(mean.values()), 4))
+
+adjusting_constant = round(400 / round(sum(mean.values()), 4), 4)
+print('Adjusting constant:', adjusting_constant)
+
+seasonal_index = {}
+for i in quarters:
+    seasonal_index[i] = round(mean[i] * adjusting_constant, 4)
+
+print('Seasonal Index for each quarter:', seasonal_index)
+print('Total of indices:', round(sum(seasonal_index.values()), 4))
+
+index = list(seasonal_index.values())
+
+# Deseasonalized data
+deseasonalized = []
+for i in range(0, len(fdata), 4):
+    deseasonalized.append(fdata[i] / (index[0] / 100))
+    deseasonalized.append(fdata[i+1] / (index[1] / 100))
+    deseasonalized.append(fdata[i+2] / (index[2] / 100))
+    deseasonalized.append(fdata[i+3] / (index[3] / 100))
+
+# ----------- Manual table print instead of PrettyTable -------------
+headers = ['Year', 'Quarter', 'Data', 'Moving Avg',
+           'Centered Moving Avg', 'Percentage Act/Mov', 'Deseasonalized Data']
+
+print("\n" + "-"*115)
+print(f"{headers[0]:<8}{headers[1]:<10}{headers[2]:<8}{headers[3]:<15}"
+      f"{headers[4]:<22}{headers[5]:<22}{headers[6]:<20}")
+print("-"*115)
+
+for i in range(len(fdata)):
+    print(f"{years[i//4]:<8}{quarters[i%4]:<10}{fdata[i]:<8}"
+          f"{str(round(m_a[i],2) if not math.isnan(m_a[i]) else 'nan'):<15}"
+          f"{str(round(c_ma[i],2) if not math.isnan(c_ma[i]) else 'nan'):<22}"
+          f"{str(round(actTomov[i],2) if not math.isnan(actTomov[i]) else 'nan'):<22}"
+          f"{round(deseasonalized[i],0):<20}")
+print("-"*115)
+
+# ---------------- Least Squares ----------------
+t = np.arange(1, len(deseasonalized) + 1, dtype=float)
+Y = np.array(deseasonalized, dtype=float)
+
+mask = ~np.isnan(Y)
+print('mask:',mask)
+t, Y = t[mask], Y[mask]
+print(t,Y)
+n = len(Y)
+sum_x = np.sum(t)
+sum_y = np.sum(Y)
+sum_xy = np.sum(t * Y)
+sum_x2 = np.sum(t**2)
+
+den = n * sum_x2 - (sum_x**2)
+b = (n * sum_xy - sum_x * sum_y) / den
+a = (sum_y - b * sum_x) / n
+
+Y_hat = a + b * t
+Y_bar = np.mean(Y)
+SST = np.sum((Y - Y_bar)**2)
+SSE = np.sum((Y - Y_hat)**2)
+R2 = 1 - SSE / SST if SST != 0 else np.nan
+
+print("\nLeast Squares")
+print(f"n = {n}")
+print(f"sigma t = {sum_x:.6f}")
+print(f"sigma Y = {sum_y:.6f}")
+print(f"sigma tY = {sum_xy:.6f}")
+print(f"sigma t^2 = {sum_x2:.6f}")
+print(f"den = {den:.6f}")
+
+print(f"\nSlope b = {b:.6f}")
+print(f"Intercept a = {a:.6f}")
+print(f"Trend Line: Y_t = {a:.4f} + {b:.6f} * t")
+print(f"R^2 = {R2:.4f}")
+
+trend_full = np.full(len(deseasonalized), np.nan)
+trend_full[mask] = Y_hat
+print('trend full:',trend_full)
+# Relative Cyclic Residual
+relative_cyclic_residuals = []
+for actual, trend in zip(deseasonalized, trend_full):
+    if not np.isnan(actual) and not np.isnan(trend):
+        rcr = (actual / trend) * 100
+    else:
+        rcr = np.nan
+    relative_cyclic_residuals.append(rcr)
+
+print("\nCyclic Variation (Relative Cyclic Residuals):")
+print(relative_cyclic_residuals)
+
+# ---------------- Plot ----------------
+plt.figure(figsize=(12, 6))
+plt.plot(xlabel, fdata, marker='o', label='Original Data')
+plt.plot(xlabel, deseasonalized, marker='s', label='Deseasonalized Data')
+plt.plot(xlabel, trend_full, marker='d', label='Trend (Least Squares)', linewidth=2, color='black')
+
+plt.xticks(rotation=45)
+plt.xlabel("Quarter")
+plt.ylabel("Value")
+plt.title("Original Data vs Deseasonalized Data vs Trend")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+-------------------
+# 1.
+import matplotlib.pyplot as plt
+
+years = [1989, 1990, 1991, 1992, 1993, 1994, 1995]
+boxes = [21.0, 19.4, 22.6, 28.2, 30.4, 24.0, 25.0]
+
+#(a) Find the linear estimating equation (y = a + bx)
+n = len(years)
+sum_x = sum(years)
+sum_y = sum(boxes)
+sum_xy = sum(x * y for x, y in zip(years, boxes))
+sum_x2 = sum(x * x for x in years)
+
+# slope (b) and intercept (a)
+b = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+a = (sum_y - b * sum_x) / n
+
+print(f"(a) The linear estimating equation is: y = {a:.2f} + {b:.2f}x")
+
+trend = [a + b * x for x in years]
+
+# (b): Calculate percent of trend
+percent_of_trend = [(actual / trend_val) * 100 for actual, trend_val in zip(boxes, trend)]
+
+print("\n(b) Percent of trend for each year:")
+for year, percent in zip(years, percent_of_trend):
+    print(f"{year}: {percent:.3f}%")
+
+# (c): Relative cyclical residual
+relative_cyclical_residual = [(actual - trend_val) / trend_val * 100 for actual, trend_val in zip(boxes, trend)]
+
+print("\n(c) Relative cyclical residual for each year:")
+for year, residual in zip(years, relative_cyclical_residual):
+    print(f"{year}: {residual:.3f}")
+
+# (d): Find year with biggest fluctuation
+max_percent_dev = max(abs(100 - p) for p in percent_of_trend)
+max_percent_year = years[[abs(100 - p) for p in percent_of_trend].index(max_percent_dev)]
+
+max_residual_dev = max(abs(r) for r in relative_cyclical_residual)
+max_residual_year = years[[abs(r) for r in relative_cyclical_residual].index(max_residual_dev)]
+
+print(f"\n(d) Year with biggest fluctuation:")
+print(f"According to percent of trend: {max_percent_year} (deviation: {max_percent_dev:.1f}%)")
+print(f"According to relative cyclical residual: {max_residual_year} (deviation: {max_residual_dev:.1f}%)")
+
+if max_percent_year == max_residual_year:
+    print("Both measures identify the same year as having the biggest fluctuation.")
+else:
+    print("The measures identify different years as having the biggest fluctuation.")
+
+
+plt.figure(figsize=(10, 6))
+plt.plot(years, boxes, 'bo-', label='Actual Sales (x10,000 boxes)', markersize=8)
+plt.plot(years, trend, 'r--', label=f'Trend Line: y = {a:.2f} + {b:.2f}x', linewidth=2)
+plt.title('Cereal Box Sales with Linear Trend (1989-1995)', fontsize=14)
+plt.xlabel('Year', fontsize=12)
+plt.ylabel('Sales (x10,000 boxes)', fontsize=12)
+plt.grid(True, linestyle='--', alpha=0.7)
+plt.legend(fontsize=12)
+plt.xticks(years)
+plt.tight_layout()
+plt.show()
+-----------------
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+
+monthly = pd.read_csv('539437.csv')
+ror_month = (monthly['Close Price'] - monthly['Open Price'])/monthly['Open Price'] *100
+monthly['ror'] = ror_month
+monthly['Year'] = monthly['Month'].apply(lambda x: int(x.split('-')[1]))
+monthly_train=monthly[monthly['Year']<2025]
+monthly_test=monthly[monthly['Year']>=2025]
+
+x_vals=list(range(len(monthly['ror'])))
+x_train,x_test=x_vals[:len(monthly_train['ror'])],x_vals[len(monthly_train['ror']):]
+
+# Convert x_train and x_test to numpy arrays
+x_train = np.array(x_train)
+x_test = np.array(x_test)
+
+#regression functions
+def linear_regression(x,y):
+  n=len(x)
+  sum_x=np.sum(x)
+  sum_y=np.sum(y)
+  sum_xy=np.sum(x*y)
+  sum_x2=np.sum(x**2)
+  b1=(n*sum_xy-sum_x*sum_y)/(n*sum_x2-sum_x**2)
+  b0=np.mean(y)-b1*np.mean(x)
+  return b0,b1
+
+def quadratic_regression(x,y):
+  n = len(x)
+  sum_x = np.sum(x)
+  sum_y = np.sum(y)
+  sum_x2 = np.sum(x**2)
+  sum_x3 = np.sum(x**3)
+  sum_x4 = np.sum(x**4)
+  sum_xy = np.sum(x*y)
+  sum_x2y = np.sum(x**2*y)
+
+  # Construct the matrix A and vector B for the system of equations
+  A = np.array([[n, sum_x, sum_x2],
+                [sum_x, sum_x2, sum_x3],
+                [sum_x2, sum_x3, sum_x4]])
+  B = np.array([sum_y, sum_xy, sum_x2y])
+
+  # Solve for the coefficients (b0, b1, b2)
+  coeffs = np.linalg.solve(A, B)
+  b0, b1, b2 = coeffs
+  return b0, b1, b2
+
+
+def cubic_regression(x,y):
+    n = len(x)
+    sum_x = np.sum(x)
+    sum_y = np.sum(y)
+    sum_xy = np.sum(x*y)
+    sum_x2y = np.sum(x**2*y)
+    sum_x3y = np.sum(x**3*y)
+    sum_x4y = np.sum(x**4*y)
+    sum_x2 = np.sum(x**2)
+    sum_x3 = np.sum(x**3)
+    sum_x4 = np.sum(x**4)
+    sum_x5 = np.sum(x**5)
+    sum_x6 = np.sum(x**6)
+
+    # Normal equations matrix
+    A = np.array([
+        [n,      sum_x,  sum_x2,  sum_x3],
+        [sum_x,  sum_x2, sum_x3,  sum_x4],
+        [sum_x2, sum_x3, sum_x4,  sum_x5],
+        [sum_x3, sum_x4, sum_x5,  sum_x6]
+    ])
+
+    # Right-hand side vector
+    B = np.array([sum_y, sum_xy, sum_x2y, sum_x3y])
+
+    # Solve for coefficients
+    coeffs = np.linalg.solve(A, B)
+    b0, b1, b2, b3 = coeffs
+    return b0, b1, b2, b3
+
+
+b0,b1=linear_regression(x_train,monthly_train['ror'])
+b0_q,b1_q,b2_q=quadratic_regression(x_train,monthly_train['ror'])
+b0_c,b1_c,b2_c,b3_c=cubic_regression(x_train,monthly_train['ror'])
+
+#print the equations
+print("Linear Regression Equation: y = {} + {}x".format(b0,b1))
+print("Quadratic Regression Equation: y = {} + {}x + {}x^2".format(b0_q,b1_q,b2_q))
+print("Cubic Regression Equation: y = {} + {}x + {}x^2 + {}x^3".format(b0_c,b1_c,b2_c,b3_c))
+
+#predict the data for the test samples
+y_pred_l=b0+b1*x_test
+y_pred_q=b0_q+b1_q*x_test+b2_q*x_test**2
+y_pred_c=b0_c+b1_c*x_test+b2_c*x_test**2+b3_c*x_test**3
+
+
+#plot the data
+plt.figure(figsize=(10, 6))
+plt.plot(monthly_test['ror'].values, label='Test Data')
+plt.plot(y_pred_l, label='Linear Regression')
+plt.plot(y_pred_q, label='Quadratic Regression')
+plt.plot(y_pred_c, label='Cubic Regression')
+plt.xlabel('Time')
+plt.ylabel('ror')
+plt.legend()
+plt.show()
+------------
+import numpy as np
+
+# Manual Durbin-Watson function
+def durbin_watson_manual(residuals):
+    numerator = np.sum((residuals[1:] - residuals[:-1])**2)
+    denominator = np.sum(residuals**2)
+    return numerator / denominator
+
+# Hardcoded DW critical values table (alpha=0.05)
+DW_TABLE = {
+    15: {1: (0.97, 1.54), 2: (0.86, 1.50), 3: (0.76, 1.46)},
+    20: {1: (1.10, 1.54), 2: (1.00, 1.50), 3: (0.90, 1.46)},
+    25: {1: (1.22, 1.54), 2: (1.13, 1.50), 3: (1.03, 1.46)},
+    30: {1: (1.32, 1.54), 2: (1.23, 1.50), 3: (1.15, 1.46)},
+}
+
+# Function to interpret DW test
+def interpret_dw(dw_value, n, k):
+    if n not in DW_TABLE or k not in DW_TABLE[n]:
+        return f"No critical values stored for n={n}, k={k}"
+    
+    dL, dU = DW_TABLE[n][k]
+    if dw_value < dL:
+        return f"DW={dw_value:.3f} → Positive autocorrelation"
+    elif dw_value > 4 - dL:
+        return f"DW={dw_value:.3f} → Negative autocorrelation"
+    elif dL <= dw_value <= dU or (4 - dU) <= dw_value <= (4 - dL):
+        return f"DW={dw_value:.3f} → Test inconclusive"
+    else:
+        return f"DW={dw_value:.3f} → No autocorrelation"
+
+# Example (replace with your model residuals)
+residuals_linear = np.array([0.1, -0.05, 0.07, -0.02, 0.01])  # example residuals
+dw_val = durbin_watson_manual(residuals_linear)
+
+n = len(residuals_linear)
+k = 1  # linear regression → 1 regressor
+print(interpret_dw(dw_val, 20, k))  # using n=20 as nearest available
