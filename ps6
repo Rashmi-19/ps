@@ -1,0 +1,450 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+df = pd.read_csv('data.csv')
+
+dates = np.random.randint(1, len(df), 150)
+
+selected_df = df.iloc[dates].copy()
+
+selected_df.loc[:, 'Rate of Return'] = ((selected_df['Close Price'] - selected_df['Open Price']) / selected_df['Open Price']) * 100
+
+f_df = selected_df[['Open Price', 'Close Price', 'Rate of Return']].copy()
+print(f_df.head())
+
+y = f_df['Rate of Return'].values
+
+x = np.arange(len(f_df))
+print(x)
+mean_x = np.mean(x)
+mean_y = np.mean(y)
+
+numerator_linear = np.sum((x - mean_x) * (y - mean_y))
+denominator_linear = np.sum((x - mean_x)**2)
+slope_linear = numerator_linear / denominator_linear
+intercept_linear = mean_y - slope_linear * mean_x
+
+print(f"Linear Regression Equation: y = {slope_linear:.4f}x + {intercept_linear:.4f}")
+
+y_pred_linear = slope_linear * x + intercept_linear
+
+plt.figure(figsize=(10, 6))
+plt.scatter(x, y, label='Original Data')
+plt.plot(x, y_pred_linear, color='red', label='Linear Regression Fit')
+plt.xlabel("Data Point Index")
+plt.ylabel("Rate of Return")
+plt.title("Linear Regression Fit")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Quadractic Regression
+
+x_quadratic = np.column_stack((np.ones(len(x)), x, x**2))
+
+# (X^T * X)^-1 * X^T * y
+X_transpose_X = np.dot(x_quadratic.T, x_quadratic)
+X_transpose_y = np.dot(x_quadratic.T, y)
+
+X_transpose_X_inv = np.linalg.inv(X_transpose_X)
+
+coefficients_quadratic = np.dot(X_transpose_X_inv, X_transpose_y)
+
+intercept_quadratic = coefficients_quadratic[0]
+slope_quadratic_x = coefficients_quadratic[1]
+slope_quadratic_x2 = coefficients_quadratic[2]
+
+print(f"Quadratic Regression Equation: y = {slope_quadratic_x2:.4f}x^2 + {slope_quadratic_x:.4f}x + {intercept_quadratic:.4f}")
+
+y_pred_quadratic = intercept_quadratic + slope_quadratic_x * x + slope_quadratic_x2 * (x**2)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(x, y, label='Original Data')
+plt.plot(x, y_pred_quadratic, color='red', label='Quadratic Regression Fit')
+plt.xlabel("Data Point Index")
+plt.ylabel("Rate of Return")
+plt.title("Quadratic Regression Fit")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# cubic regression
+
+x_cubic = np.column_stack((np.ones(len(x)), x, x**2, x**3))
+
+# (X^T * X)^-1 * X^T * y
+X_transpose_X = np.dot(x_cubic.T, x_cubic)
+X_transpose_y = np.dot(x_cubic.T, y)
+
+X_transpose_X_inv = np.linalg.inv(X_transpose_X)
+
+coefficients_cubic = np.dot(X_transpose_X_inv, X_transpose_y)
+
+intercept_cubic = coefficients_cubic[0]
+slope_cubic_x = coefficients_cubic[1]
+slope_cubic_x2 = coefficients_cubic[2]
+slope_cubic_x3 = coefficients_cubic[3]
+
+print(f"Cubic Regression Equation: y = {slope_cubic_x3:.4f}x^3 + {slope_cubic_x2:.4f}x^2 + {slope_cubic_x:.4f}x + {intercept_cubic:.4f}")
+
+y_pred_cubic = intercept_cubic + slope_cubic_x * x + slope_cubic_x2 * (x**2) + slope_cubic_x3 * (x**3)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(x, y, label='Original Data')
+plt.plot(x, y_pred_cubic, color='red', label='Cubic Regression Fit')
+plt.xlabel("Data Point Index")
+plt.ylabel("Rate of Return")
+plt.title("Cubic Regression Fit")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Validation n Coefficient of Determination
+
+mse_linear = np.mean((y - y_pred_linear)**2)
+# R-squared
+ssr_linear = np.sum((y_pred_linear - mean_y)**2)
+sst_linear = np.sum((y - mean_y)**2)
+r2_linear = ssr_linear / sst_linear
+
+print(f"--- Linear Regression Evaluation ---")
+print(f"Mean Squared Error (MSE): {mse_linear:.4f}")
+print(f"R-squared (R2): {r2_linear:.4f}")
+print("-" * 30)
+
+# evaluation metrics for Quadratic Regression
+mse_quadratic = np.mean((y - y_pred_quadratic)**2)
+# R-squared
+ssr_quadratic = np.sum((y_pred_quadratic - mean_y)**2)
+sst_quadratic = np.sum((y - mean_y)**2)
+r2_quadratic = ssr_quadratic / sst_quadratic
+
+print(f"--- Quadratic Regression Evaluation ---")
+print(f"Mean Squared Error (MSE): {mse_quadratic:.4f}")
+print(f"R-squared (R2): {r2_quadratic:.4f}")
+print("-" * 30)
+
+
+# evaluation metrics for Cubic Regression
+mse_cubic = np.mean((y - y_pred_cubic)**2)
+# R-squared
+ssr_cubic = np.sum((y_pred_cubic - mean_y)**2)
+sst_cubic = np.sum((y - mean_y)**2)
+r2_cubic = ssr_cubic / sst_cubic
+
+print(f"--- Cubic Regression Evaluation ---")
+print(f"Mean Squared Error (MSE): {mse_cubic:.4f}")
+print(f"R-squared (R2): {r2_cubic:.4f}")
+print("-" * 30)
+
+#lower MSE[0,inf) and higher R-squared[0,1] generally indicates a better fit.
+
+
+from scipy import stats
+
+residuals_linear = y - y_pred_linear
+print("Linear Regression Residuals (first 10):")
+print(residuals_linear[:10])
+
+ttest_linear = stats.ttest_1samp(residuals_linear, 0)
+print(f"\nLinear Regression Residuals T-test: statistic={ttest_linear.statistic}, pvalue={ttest_linear.pvalue}")
+
+residuals_quadratic = y - y_pred_quadratic
+print("\nQuadratic Regression Residuals (first 10):")
+print(residuals_quadratic[:10])
+
+ttest_quadratic = stats.ttest_1samp(residuals_quadratic, 0)
+print(f"\nQuadratic Regression Residuals T-test: statistic={ttest_quadratic.statistic}, pvalue={ttest_quadratic.pvalue}")
+
+residuals_cubic = y - y_pred_cubic
+print("\nCubic Regression Residuals (first 10):")
+print(residuals_cubic[:10])
+
+ttest_cubic = stats.ttest_1samp(residuals_cubic, 0)
+print(f"\nCubic Regression Residuals T-test: statistic={ttest_cubic.statistic}, pvalue={ttest_cubic.pvalue}")
+---------------------------------------
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+periods = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+yt = np.array([np.random.uniform(0, 1) for _ in range(10)])
+
+def exponential_smoothing_with_y1(yt, lambda_, y1):
+    smoothed = np.zeros(len(yt))
+    smoothed[0] = y1
+    for t in range(1, len(yt)):
+        smoothed[t] = lambda_ * yt[t] + (1 - lambda_) * smoothed[t - 1]
+    return smoothed
+
+def exponential_smoothing_with_ymean(yt, lambda_, ymean):
+    smoothed = np.zeros(len(yt))
+    smoothed[0] = ymean
+    for t in range(1, len(yt)):
+        smoothed[t] = lambda_ * yt[t] + (1 - lambda_) * smoothed[t - 1]
+    return smoothed
+
+for i in range(10):
+  lambda_=  np.random.uniform(0, 1)
+  smoothed_y1 = exponential_smoothing_with_y1(yt, lambda_, yt[0])
+  smoothed_ymean = exponential_smoothing_with_ymean(yt, lambda_, np.mean(yt))
+
+  data = {
+      'Period': periods,
+      'Original': yt,
+      'Smoothed_y1': smoothed_y1,
+      'Smoothed_ymean': smoothed_ymean
+
+  }
+  df = pd.DataFrame(data)
+  print(df)
+
+
+  plt.plot(periods, yt, label='Original Data', marker='o')
+  plt.plot(periods, smoothed_y1, label=f'Smoothed at lambda={lambda_} and y = y1', marker='o')
+  plt.plot(periods, smoothed_ymean, label=f'Smoothed at lambda={lambda_} and y = ymean', marker='^')
+  plt.xlabel('Period')
+  plt.ylabel('yt')
+  plt.title('Original vs Smoothed Data')
+  plt.legend()
+  plt.grid(True)
+  plt.xticks(periods)
+  plt.tight_layout()
+  plt.show()
+
+
+  #ttest
+  import numpy as np
+  from scipy.stats import t
+  before = yt
+  after1=smoothed_y1
+  after2=smoothed_ymean
+
+  d1 = before- after1
+  d2 = before - after2
+
+  d_mean1 = np.mean(d1)
+  d_mean2 = np.mean(d2)
+
+  d_std1 = np.std(d1, ddof=1)
+  d_std2 = np.std(d2, ddof=1)
+
+  n = len(d1)
+
+  t_stat1 = d_mean1 / (d_std1 / np.sqrt(n))
+  t_stat2 = d_mean2 / (d_std2 / np.sqrt(n))
+
+  p_val1 = 2 * t.sf(np.abs(t_stat1), df=n-1)
+  p_val2 = 2 * t.sf(np.abs(t_stat2), df=n-1)
+
+
+  alpha = 0.05
+  print("t-statistic:", t_stat1)
+  print("p-value:", p_val1)
+
+  if p_val1 < alpha:
+      print(" For y0^ = y1")
+      print(f"Reject H0 at α={alpha}: Significant difference between before and after.")
+  else:
+      print(f"Fail to Reject H0 at α={alpha}: No significant difference between before and after.")
+
+  print("t-statistic:", t_stat2)
+  print("p-value:", p_val2)
+  if p_val2 < alpha:
+      print(" For y0^ = ymean")
+      print(f"Reject H0 at α={alpha}: Significant difference between before and after.")
+  else:
+      print(f"Fail to Reject H0 at α={alpha}: No significant difference between before and after.")
+-----------------------------
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from math import sqrt
+
+# Data
+yt = np.array([
+    48.7, 45.8, 46.4, 46.2, 44.0,
+    53.8, 47.6, 47.0, 47.6, 51.1,
+    49.1, 46.7, 47.8, 45.8, 45.5,
+    49.2, 54.8, 44.7, 51.1, 47.3,
+    45.3, 43.3, 44.6, 47.1, 53.4,
+    44.9, 50.5, 48.1, 45.4, 51.6,
+    50.8, 46.4, 52.3, 50.5, 53.4,
+    53.9, 52.3, 53.0, 48.6, 52.4,
+    47.9, 49.5, 44.0, 53.8, 52.5,
+    52.0, 50.6, 48.7, 51.4, 47.7
+], dtype=float)
+
+lam = 0.3
+train_n = 35
+y_train = yt[:train_n]
+y_test = yt[train_n:]
+periods = np.arange(1, len(yt) + 1)
+
+# Second-order exponential smoothing on training set
+n = len(y_train)
+y1 = np.zeros(n)
+y2 = np.zeros(n)
+yhat = np.zeros(n)
+
+y1[0] = y_train[0]
+y2[0] = y1[0]
+yhat[0] = y_train[0]
+
+for t in range(1, n):
+    y1[t] = lam * y_train[t] + (1 - lam) * y1[t - 1]
+    y2[t] = lam * y1[t] + (1 - lam) * y2[t - 1]
+    yhat[t] = 2 * y1[t] - y2[t]
+
+# Compute a_T (level) and b_T (trend) at last training point
+y1_T = y1[-1]
+y2_T = y2[-1]
+
+a_T = 2 * y1_T - y2_T
+b_T = (lam / (1 - lam)) * (y1_T - y2_T)
+
+# Forecast test set using (a_T + b_T * h)
+h_steps = np.arange(1, len(y_test) + 1)
+yhat_test = a_T + b_T * h_steps
+
+pred_df = pd.DataFrame({
+    "Period": periods[train_n:],
+    "Actual": y_test,
+    "Forecast": yhat_test,
+    "Residual": y_test - yhat_test
+})
+
+
+smooth_df = pd.DataFrame({
+    "Period": periods[:train_n],
+    "y": y_train,
+    "y(1)": y1,
+    "y(2)": y2,
+    "y_hat": yhat
+})
+
+print("\nSecond-Order Exponential Smoothing Table (Training Set):")
+print(smooth_df.to_string(index=False))
+
+# Manual one-sample t-test
+res = pred_df["Residual"].values
+n_test = len(res)
+mean_res = np.mean(res)
+sd_res = np.std(res, ddof=1)
+se_res = sd_res / sqrt(n_test)
+t_stat = mean_res / se_res if se_res > 0 else float('nan')
+
+# Results
+print("Level-Trend estimates at T=35:")
+print(f"a_T (level) = {a_T:.4f}")
+print(f"b_T (trend) = {b_T:.4f}")
+
+print("\nManual t-test on residuals (H0: mean=0):")
+print(f"t = {t_stat:.4f}")
+
+print("\nForecast Table (Test Periods):")
+print(pred_df.to_string(index=False))
+
+
+# Plot
+plt.figure(figsize=(10,4))
+plt.plot(periods[:train_n], y_train, label="Train Actual", marker="o")
+plt.plot(periods[:train_n], y1, label="First Smoother (ỹ(1))", linestyle="-")
+plt.plot(periods[:train_n], y2, label="Second Smoother (ỹ(2))", linestyle="-.")
+plt.plot(periods[:train_n], yhat, label="Train Fitted", linestyle="--")
+plt.legend()
+plt.xlabel("Period")
+plt.ylabel("y")
+plt.title("Second-Order Exponential Smoothing with Level & Trend (a_T, b_T)")
+plt.show()
+--------------------------------------------------
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+y = np.array([29,20,25,29,31,33,34,27,26,30,
+              29,28,28,26,27,26,30,28,26,30,
+              31,30,37,30,33,31,27,33,37,29,
+              28,30,29,34,30,20,17,23,24,34,
+              36,35,33,29,25,27,30,29,28,32])
+
+ymean=np.mean(y)
+n=len(y)
+lags=25
+
+def acf(series,lags):
+    n=len(series)
+    ymean=np.mean(y)
+    demeaned=y-ymean
+    c0=np.sum( demeaned**2)/n
+    acf_values=[1]
+    for k in range(1,lags+1):
+        ck=np.sum(demeaned[:-k]*demeaned[k:])/n
+        acf_values.append(ck/c0)
+    return acf_values
+
+acf_k=acf(y, lags)
+
+conf = 1.96/np.sqrt(n)
+
+plt.stem(range(len(acf_k)),acf_k, basefmt=" ")
+plt.axhline(0, color="black")
+plt.axhline(conf, color="red",linestyle="--")
+plt.axhline(- conf, color="red",linestyle="--")
+plt.title("Sample ACF")
+plt.xlabel("Lag")
+plt.ylabel("ACF")
+plt.show()
+plt.show()
+
+
+######################################################
+
+def pacf(series,lags):
+    rho=acf(series, lags)
+    pacf_vals=[1]
+    
+    for k in range(1,lags+1):
+        p_k=np.array([[rho[abs(i-j)] for j in range(k)] for i in range(k)])
+        rho_k = np.array(rho[1:k+1])
+        phi_k=np.linalg.solve(p_k,rho_k)
+        pacf_vals.append(phi_k[-1])
+    return np.array(pacf_vals)
+
+pacf_k=pacf(y, lags)
+    
+conf = 2/np.sqrt(n)
+
+plt.stem(range(len(pacf_k)),pacf_k, basefmt=" ")
+plt.axhline(0, color="black")
+plt.axhline(conf, color="red",linestyle="--")
+plt.axhline(- conf, color="red",linestyle="--")
+plt.title("Sample PACF")
+plt.xlabel("Lag")
+plt.ylabel("PACF")
+plt.show()
+plt.show()
+
+
+
+print("PACF VALUES WITH SIGNIFICANCE TESTING")
+print("=" * 65)
+print(f"{'Lag':<6} {'PACF':<10} {'Significant?':<12} {'Decision':<40}")
+print("-" * 65)
+
+for lag, val in enumerate(pacf_k):
+    if lag == 0:
+        significant = "N/A"
+        decision = "PACF(0) = 1 (by definition)"
+    else:
+        # Null hypothesis: PACF(lag) = 0
+        # Reject H0 if |PACF| > 2/root(n)
+        if abs(val) > conf:
+            significant = "Yes"
+            decision = "Reject H0: Significant partial autocorrelation"
+        else:
+            significant = "No"
+            decision = "Fail to reject H0: Not significant"
+
+    print(f"{lag:<6} {val:<10.4f} {significant:<12} {decision:<40}")
